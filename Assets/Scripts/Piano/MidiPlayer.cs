@@ -6,6 +6,8 @@ public class MidiPlayer : MonoBehaviour
 {
 	[Header("References")]
 	public PianoKeyController PianoKeyDetector;
+	public Component BoxCube;
+
 
 	[Header("Properties")]
 	public float GlobalSpeed = 1;
@@ -23,6 +25,8 @@ public class MidiPlayer : MonoBehaviour
 	public UnityEvent OnPlayTrack { get; set; }
 
 	MidiFileInspector _midi;
+
+	private int todd = 0;
 
 	string _path;
 	string[] _keyIndex;
@@ -54,6 +58,31 @@ public class MidiPlayer : MonoBehaviour
 		}
 	}
 
+	private void handlePiano() {
+		if (ShowMIDIChannelColours)
+		{
+			PianoKeyDetector.PianoNotes[MidiNotes[_noteIndex].Note].Play(MIDIChannelColours[MidiNotes[_noteIndex].Channel],
+																	MidiNotes[_noteIndex].Velocity, 
+																	MidiNotes[_noteIndex].Length, 
+																	PianoKeyDetector.MidiPlayer.GlobalSpeed * MIDISongs[_midiIndex].Speed);
+		}
+		else
+			PianoKeyDetector.PianoNotes[MidiNotes[_noteIndex].Note].Play(MidiNotes[_noteIndex].Velocity, 
+																	MidiNotes[_noteIndex].Length, 
+																	PianoKeyDetector.MidiPlayer.GlobalSpeed * MIDISongs[_midiIndex].Speed);
+	}
+
+	private void handleBox(){
+		todd++;
+		var cuberenderer = BoxCube.GetComponent<Renderer>();
+		if ((todd%2)==0)
+		{
+			cuberenderer.material.SetColor("_Color", Color.yellow);
+		} else {
+			cuberenderer.material.SetColor("_Color", Color.green);
+		}
+	}
+
 	void Update ()
 	{
 		if (MIDISongs.Length <= 0)
@@ -67,17 +96,24 @@ public class MidiPlayer : MonoBehaviour
 			{
 				if (PianoKeyDetector.PianoNotes.ContainsKey(MidiNotes[_noteIndex].Note))
 				{
-					if (ShowMIDIChannelColours)
-					{
-						PianoKeyDetector.PianoNotes[MidiNotes[_noteIndex].Note].Play(MIDIChannelColours[MidiNotes[_noteIndex].Channel],
-																				MidiNotes[_noteIndex].Velocity, 
-																				MidiNotes[_noteIndex].Length, 
-																				PianoKeyDetector.MidiPlayer.GlobalSpeed * MIDISongs[_midiIndex].Speed);
+					string instr = _midi.getInstrument(MidiNotes[_noteIndex].Channel);
+
+					switch (instr) {
+						case "key:Piano":
+							handlePiano();
+							break;
+						
+						case "igroup:Brass":
+							handleBox();
+							break;
+						
+						case "event:Lights":
+							//Debug.Log("Skipping lights");
+							handlePiano();
+							break;
+						
+						default: break;
 					}
-					else
-						PianoKeyDetector.PianoNotes[MidiNotes[_noteIndex].Note].Play(MidiNotes[_noteIndex].Velocity, 
-																				MidiNotes[_noteIndex].Length, 
-																				PianoKeyDetector.MidiPlayer.GlobalSpeed * MIDISongs[_midiIndex].Speed);
 				}
 
 				_noteIndex++;

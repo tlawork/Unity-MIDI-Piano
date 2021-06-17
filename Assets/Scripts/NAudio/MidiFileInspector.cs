@@ -10,6 +10,14 @@ public class MidiFileInspector
 	public MidiFile MidiFile;
 	private List<TempoEvent> _tempoEvents = new List<TempoEvent>();
 
+	private string[] _instrumentSelection = new string[17];
+
+	
+	public string getInstrument(int index)
+	{
+		return _instrumentSelection[index];
+	}
+
 	public MidiFileInspector (string fileName, bool strictCheck = false)
 	{
 		if (!File.Exists(fileName))
@@ -27,6 +35,9 @@ public class MidiFileInspector
 
 	public MidiNote[] GetNotes ()
 	{
+		string currentTrackName = "Control";
+		int currentTrackIndex = 0;
+
 		BuildTempoList();
 
 		List<MidiNote> notes = new List<MidiNote>();
@@ -50,6 +61,7 @@ public class MidiFileInspector
 		{
 			foreach (MidiEvent midiEvent in MidiFile.Events[n])
 			{
+				// TODD: normally it will be a note on - so this comes first - 
 				if (MidiEvent.IsNoteOn(midiEvent))
 				{
 					try
@@ -62,6 +74,8 @@ public class MidiFileInspector
 						noteOn.Channel = n;
 						noteOn.Velocity = t_note.Velocity;
 						noteOn.StartTime = t_note.AbsoluteTime;
+
+						noteOn.IType = currentTrackName; // TODD Added CurrentTrackName
 
 						if (_tempoEvents.Count > 0)
 						{
@@ -88,9 +102,20 @@ public class MidiFileInspector
 						throw formatEx;
 					}
 				}
+				else {
+					string mv = midiEvent.ToString();
+					if (mv.Contains("SequenceTrackName")) {
+						string[] parts = mv.Split(' ');
+						currentTrackName = parts[parts.Length - 1]; // get last word 
+						Debug.Log("Current Track Name Set: " + currentTrackName);
+						_instrumentSelection[currentTrackIndex] = currentTrackName;
+						Debug.Log(String.Format("Setting track {0} index {1}", currentTrackName, currentTrackIndex));
+						currentTrackIndex++;
+					}
+				}
 			}
 		}
-		
+	
 		return SortNotes(notes).ToArray();
 	}
 
@@ -188,6 +213,8 @@ public class MidiFileInspector
 		public double RealTime { get; set; }
 		public double BPM { get; set; }
 	}
+
+
 }
 
 [Serializable]
@@ -195,6 +222,7 @@ public class MidiNote
 {
 	public double StartTime;
 	public int Channel;
+	public string IType; 
 	public string Note;
 	public float Length;
 	public int Velocity;
@@ -205,12 +233,14 @@ public class MidiNote
 
 	}
 
-	public MidiNote (double startTime, int channel, string note, int length, int velocity)
+	public MidiNote (double startTime, int channel, string note, int length, int velocity, string instype="none")
 	{
 		StartTime = startTime;
 		Channel = channel;
 		Note = note;
 		Length = length;
 		Velocity = velocity;
+		IType = instype;
+
 	}
 }
