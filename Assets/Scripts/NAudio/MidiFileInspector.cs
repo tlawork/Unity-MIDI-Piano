@@ -85,6 +85,7 @@ public class MidiFileInspector
 							}
 							catch (Exception e)
 							{
+								Debug.Log(e);
 								noteOn.Tempo = MidiFile.DeltaTicksPerQuarterNote * defaultTempo / 60;
 							}
 						}

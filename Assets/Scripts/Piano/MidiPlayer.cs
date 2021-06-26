@@ -6,6 +6,7 @@ public class MidiPlayer : MonoBehaviour
 {
 	[Header("References")]
 	public PianoKeyController PianoKeyDetector;
+	public TrumpetController TrumpetController;
 	public Component BoxCube;
 
 
@@ -36,11 +37,16 @@ public class MidiPlayer : MonoBehaviour
 	[SerializeField, HideInInspector]
 	bool _preset = false;
 
+	private AudioSource m_MyAudioSource;
+
+
 	void Start ()
 	{
 		OnPlayTrack = new UnityEvent();
 		OnPlayTrack.AddListener(delegate{FindObjectOfType<MusicText>().StartSequence(MIDISongs[_midiIndex].Details);});
 		
+		m_MyAudioSource = GetComponent<AudioSource>();
+
 		_midiIndex = 0;
 
 		if (!_preset)
@@ -75,12 +81,24 @@ public class MidiPlayer : MonoBehaviour
 	private void handleBox(){
 		todd++;
 		var cuberenderer = BoxCube.GetComponent<Renderer>();
+		BoxKey boxkey = BoxCube.GetComponentInChildren<BoxKey>();
+		Debug.Log(MidiNotes[_noteIndex].Length);
+		boxkey.Play(MidiNotes[_noteIndex].Length);
+
 		if ((todd%2)==0)
 		{
 			cuberenderer.material.SetColor("_Color", Color.yellow);
 		} else {
 			cuberenderer.material.SetColor("_Color", Color.green);
 		}
+
+		TrumpetController.PressValve(MidiNotes[_noteIndex].Note, MidiNotes[_noteIndex].Length);
+
+		// TrumpetPressKey pk = TrumpetFinger.GetComponentInChildren<TrumpetPressKey>();
+		// pk.pressed = ((todd%2)==0);
+
+		// TrumpetLight.GetComponentInChildren<Light>().enabled = ((todd%2)==0);
+
 	}
 
 	void Update ()
@@ -92,30 +110,33 @@ public class MidiPlayer : MonoBehaviour
 		{
 			_timer += Time.deltaTime * GlobalSpeed * (float)MidiNotes[_noteIndex].Tempo;
 
+			if (_noteIndex == 0)
+			{
+				m_MyAudioSource.volume = 1f;
+				m_MyAudioSource.Play();
+			}
+
 			while (_noteIndex < MidiNotes.Length && MidiNotes[_noteIndex].StartTime < _timer)
 			{
-				if (PianoKeyDetector.PianoNotes.ContainsKey(MidiNotes[_noteIndex].Note))
-				{
-					string instr = _midi.getInstrument(MidiNotes[_noteIndex].Channel);
-
-					switch (instr) {
-						case "key:Piano":
+				string instr = _midi.getInstrument(MidiNotes[_noteIndex].Channel);
+				switch (instr) {
+					case "key:Piano":
+						if (PianoKeyDetector.PianoNotes.ContainsKey(MidiNotes[_noteIndex].Note))
+						{		
 							handlePiano();
-							break;
+						}
+						break;
 						
-						case "igroup:Brass":
-							handleBox();
-							break;
+					case "igroup:Brass":
+						handleBox();
+						break;
 						
-						case "event:Lights":
-							//Debug.Log("Skipping lights");
-							handlePiano();
-							break;
+					case "event:Lights":
+						Debug.Log("Skipping lights");
+						break;
 						
-						default: break;
-					}
+					default: break;
 				}
-
 				_noteIndex++;
 			}
 		}
